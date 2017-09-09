@@ -1,0 +1,184 @@
+{% extends "Bases.html" %}
+{% block title %}
+    xCode you know it
+{% endblock %}
+{% block content %}
+    <div>
+        <form method="get" id="fm" class="btn-group" style="margin-bottom: 15px;">
+            <select class="btn btn-default" name="downed">
+                <option value="">全部</option>
+                <option value="0" {% if requestdata['downed']=='0' %}selected="selected"{% endif %}>未下载</option>
+                <option value="1" {% if requestdata['downed']=='1' %}selected="selected"{% endif %}>已下载</option>
+            </select>
+            <select class="btn btn-default" name="ma">
+                <option value="">全部</option>
+                <option value="0" {% if requestdata['ma']=='0' %}selected="selected"{% endif %}>未知</option>
+                <option value="1" {% if requestdata['ma']=='1' %}selected="selected"{% endif %}>有码</option>
+                <option value="2" {% if requestdata['ma']=='2' %}selected="selected"{% endif %}>无码</option>
+            </select>
+            <select class="btn btn-default sel" name="code">
+                <option value="">全部</option>{% for p in pc %}
+                <option value="{{ p.code }}" {% if requestdata['code']==p.code %}selected="selected"{% endif %}>{{ p.code }}</option>{% endfor %}
+            </select>
+            <select class="btn btn-default" name="star">
+                <option value="">全部</option>{% for p in ss %}
+                <option value="{% if p.star %}{{ p.star }}{% else %}-1{% endif %}" {% if requestdata['star']==p.star %}selected="selected"{% endif %}>{{ p.star }}</option>{% endfor %}
+            </select>
+            <button class="btn btn-default" type="submit" onclick="$('#pageindex').val('');$('#pagesize').val('');">搜索</button>
+            <input type="hidden" name="pageindex" id="pageindex" value="{{ requestdata['pageindex'] }}"/>
+            <input type="hidden" name="pagesize" id="pagesize" value="{{ requestdata['pagesize'] }}"/>
+        </form>
+
+        <form class="input-group pull-right" style="width: 250px;" id="searchform">
+            <input type="text" placeholder="XXX-521" class="form-control" id="xcode"/>
+            <span class="input-group-btn">
+                <button class="btn btn-default" type="submit" id="search">Search !</button>
+            </span>
+        </form>
+    </div>
+
+    <div class="text-center">{{ pagehtml }}</div>
+
+    <div class="uk-grid" data-uk-grid-margin>
+        {% for p in ps %}
+            <div class="uk-width-small-1-1 uk-width-medium-1-2 uk-width-large-1-3">
+                <div id="col-{{ p.id }}" class="thumbnail">
+                    <a href="https://www.javbus.info/{{ p.code }}" target="_blank"><img id="pic-{{ p.id }}" src="./photos/{{ p.fname }}"/></a>
+                    <div class="caption">
+                        <p>
+                            <a href="https://www.javbus.info/{{ p.code }}" target="_blank">{{ p.code }}</a>
+                        {% if p.starcode %}
+                            (<a href="https://www.javbus.info/star/{{ p.starcode }}" target="_blank" style="color: #333333;" id="star-{{ p.id }}">{{ p.star }}</a>)
+                        {% else %}
+                            (<a href="https://www.javbus.info/star/{{ p.starcode }}" target="_blank" style="color: #ff0000;" id="star-{{ p.id }}">{{ p.star }}</a>)
+                        {% endif %}
+                        </p>
+
+                        <p>
+                            {% if p.ima == 0 %}
+                            <a href="javascript:" class="btn btn-primary btn-xs" onclick="doit('ima','{{ p.id }}','1')">未知</a>
+                        {% elif p.ima == 1 %}
+                            <a href="javascript:" class="btn btn-warning btn-xs" onclick="doit('ima','{{ p.id }}','2')">有码</a>
+                        {% elif p.ima == 2 %}
+                            <a href="javascript:" class="btn btn-success btn-xs" onclick="doit('ima','{{ p.id }}','0')">无码</a>
+                        {% endif %}
+
+                        <a href="javascript:" class="btn btn-success btn-xs" onclick="reimg('{{ p.id }}','{{ p.code }}')">更新信息</a>
+                        <a href="javascript:" class="btn btn-success btn-xs" onclick="deimg('{{ p.id }}')">删除</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="text-center">{{ pagehtml }}</div>
+{% endblock %}
+{% block script %}
+    <script type="text/javascript" src="static/plugins/bootstrap/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="static/plugins/bootstrap/css/bootstrap.min.css" />
+
+    <script type="text/javascript" src="static/plugins/uikit/js/uikit.min.js"></script>
+    <link rel="stylesheet" href="static/plugins/uikit/css/uikit.min.css" />
+    <style type="text/css">
+        input, select, button { height: 32px;  }
+        .caption p{margin:0 0 10px 0;}
+        .caption *+p{margin:0!important;}
+    </style>
+    <script type="text/javascript">
+        $(function () {
+            $("#searchform").submit(function () {
+                var xcode = $('#xcode').val();
+                if (!xcode) { return false; }
+                loading.Show('#searchform');
+
+                $.ajax({
+                    url: 'search',
+                    data: {'xcode': xcode},
+                    dataType: 'json',
+                    success: function (resp) {
+                        if (resp.code === 1) {
+                            //window.location.hash = resp.data;
+                            location.href = "#" + resp.data;
+                            $('.panel').attr('css', 'panel pannel-default');
+                            $('#pan-' + resp.data).addClass('panel-primary');
+                        }
+                        if (resp.code === 0) {
+                            alert('番号信息获取成功');
+                            location.reload();
+                        }
+                        else {
+                            alert(resp.msg);
+                        }
+                        //console.log(resp);
+                    },
+                    error: function () {
+                        alert('番号信息获取失败:服务器返回错误,请重试');
+                    },
+                    complete: function () {
+                        loading.Hide('#searchform');
+                    }
+                });
+                return false;
+            });
+            $('.sel').change(function () {
+                $("#pageindex").val(1);
+                $('#searchform').submit()
+            });
+        });
+        function doit(t, i, v) {
+            $.get(Array(t, i, v).join('/'), function (resp) {
+                if (resp.code === 0) {
+                    location.reload();
+                }
+                else {
+                    alert(resp.msg);
+                }
+            }, 'json');
+        }
+        function reimg(pid, xcode) {
+            loading.Show('#col-' + pid);
+            $.ajax({
+                url: 'recode',
+                type: 'GET',
+                dataType: 'json',
+                data: {'xcode': xcode},
+
+                success: function (resp) {
+                    if (resp.code === 0) {
+                        //console.log(resp.data.star);
+                        $('#pic-' + pid).attr('src', $('#pic-' + pid).attr('src'));
+                        $('#star-' + pid).html(resp.data.star);
+                        //location.reload();
+                    } else {
+                        alert(resp.msg);
+                    }
+                },
+                complete: function () {
+                    loading.Hide('#col-' + pid);
+                },
+                error: function () {
+                    alert(xcode + ' 图片信息获取失败,请重试');
+                }
+            });
+        }
+        function deimg(pid) {
+            if (!confirm('确定删除？')) {
+                return false;
+            }
+            $.get('deimg', {'pid': pid}, function (resp) {
+                if (resp.code === 0) {
+                    //$("#col-" + pid).remove()
+                    location.reload()
+                }
+                else {
+                    alert(resp.msg);
+                }
+            }, 'json');
+        }
+        function goPage(pageindex) {
+            $("#pageindex").val(pageindex);
+            $("#fm").submit();
+        }
+    </script>
+{% endblock %}
