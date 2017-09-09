@@ -1,8 +1,5 @@
 <p align="center">
 	<h1 align="center">私人番号收藏</h1>
-	<p align="center">
-		<a href="http://www.suncoder.cn" target="_blank"><strong>Visit Suncoder &raquo;</strong></a>
-	</p>
 </p>
 
 ## 简介
